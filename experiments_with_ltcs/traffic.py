@@ -1,19 +1,21 @@
+import datetime as dt
+import argparse
+from ctrnn_model import CTRNN, NODE, CTGRU
+import ltc_model as ltc
+import tensorflow as tf
 import numpy as np
 import pandas as pd
 import os
 
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Run on CPU
 
-import tensorflow as tf
-
-import ltc_model as ltc
-from ctrnn_model import CTRNN, NODE, CTGRU
-import argparse
-import datetime as dt
+# Default data path
+DATA_PATH = r"D:\ML\Datasets\liquid_time_constant_networks"
 
 
 def load_trace():
-    df = pd.read_csv("data/traffic/Metro_Interstate_Traffic_Volume.csv")
+    df = pd.read_csv(os.path.join(
+        DATA_PATH, "traffic/Metro_Interstate_Traffic_Volume.csv"))
     holiday = (df["holiday"].values == None).astype(np.float32)
     temp = df["temp"].values.astype(np.float32)
     temp -= np.mean(temp)  # normalize temp by annual mean
@@ -22,12 +24,14 @@ def load_trace():
     clouds = df["clouds_all"].values.astype(np.float32)
     date_time = df["date_time"].values
     # 2012-10-02 13:00:00
-    date_time = [dt.datetime.strptime(d, "%Y-%m-%d %H:%M:%S") for d in date_time]
+    date_time = [dt.datetime.strptime(
+        d, "%Y-%m-%d %H:%M:%S") for d in date_time]
     weekday = np.array([d.weekday() for d in date_time]).astype(np.float32)
     noon = np.array([d.hour for d in date_time]).astype(np.float32)
     noon = np.sin(noon * np.pi / 24)
 
-    features = np.stack([holiday, temp, rain, snow, clouds, weekday, noon], axis=-1)
+    features = np.stack(
+        [holiday, temp, rain, snow, clouds, weekday, noon], axis=-1)
 
     traffic_volume = df["traffic_volume"].values.astype(np.float32)
     traffic_volume -= np.mean(traffic_volume)  # normalize
@@ -67,10 +71,12 @@ class TrafficData:
 
         self.valid_x = self.train_x[:, permutation[:valid_size]]
         self.valid_y = self.train_y[:, permutation[:valid_size]]
-        self.test_x = self.train_x[:, permutation[valid_size : valid_size + test_size]]
-        self.test_y = self.train_y[:, permutation[valid_size : valid_size + test_size]]
-        self.train_x = self.train_x[:, permutation[valid_size + test_size :]]
-        self.train_y = self.train_y[:, permutation[valid_size + test_size :]]
+        self.test_x = self.train_x[:,
+                                   permutation[valid_size: valid_size + test_size]]
+        self.test_y = self.train_y[:,
+                                   permutation[valid_size: valid_size + test_size]]
+        self.train_x = self.train_x[:, permutation[valid_size + test_size:]]
+        self.train_y = self.train_y[:, permutation[valid_size + test_size:]]
 
     def iterate_train(self, batch_size=16):
         total_seqs = self.train_x.shape[1]
@@ -125,7 +131,8 @@ class TrafficModel:
                 self.fused_cell, head, dtype=tf.float32, time_major=True
             )
         elif model_type == "ctrnn":
-            self.fused_cell = CTRNN(model_size, cell_clip=-1, global_feedback=True)
+            self.fused_cell = CTRNN(
+                model_size, cell_clip=-1, global_feedback=True)
             head, _ = tf.nn.dynamic_rnn(
                 self.fused_cell, head, dtype=tf.float32, time_major=True
             )
@@ -182,11 +189,13 @@ class TrafficModel:
             if verbose and e % log_period == 0:
                 test_acc, test_loss = self.sess.run(
                     [self.accuracy, self.loss],
-                    {self.x: gesture_data.test_x, self.target_y: gesture_data.test_y},
+                    {self.x: gesture_data.test_x,
+                        self.target_y: gesture_data.test_y},
                 )
                 valid_acc, valid_loss = self.sess.run(
                     [self.accuracy, self.loss],
-                    {self.x: gesture_data.valid_x, self.target_y: gesture_data.valid_y},
+                    {self.x: gesture_data.valid_x,
+                        self.target_y: gesture_data.valid_y},
                 )
                 # MSE metric -> less is better
                 if (valid_loss < best_valid_loss and e > 0) or e == 1:

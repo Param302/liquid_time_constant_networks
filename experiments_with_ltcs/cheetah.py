@@ -3,6 +3,9 @@ import pandas as pd
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '-1'  # Run on CPU
 
+# Default data path
+DATA_PATH = r"D:\ML\Datasets\liquid_time_constant_networks"
+
 import tensorflow as tf
 import ltc_model as ltc
 from ctrnn_model import CTRNN, NODE, CTGRU
@@ -27,7 +30,8 @@ def cut_in_sequences(x,seq_len,inc=1):
 class CheetahData:
 
     def __init__(self,seq_len=32):
-        all_files = sorted([os.path.join("data/cheetah",d) for d in os.listdir("data/cheetah") if d.endswith(".npy")])
+        cheetah_path = os.path.join(DATA_PATH, "cheetah")
+        all_files = sorted([os.path.join(cheetah_path,d) for d in os.listdir(cheetah_path) if d.endswith(".npy")])
 
         train_files = all_files[15:25]
         test_files = all_files[5:15]
